@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Fund Rating Survey</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="header">
+    <h1>Fund Rating Survey Dashboard</h1>
+    <p>View and manage counterparty ratings</p>
+  </div>
+
+  <div class="container wide">
+    <div id="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="error-message"></div>
+    <div id="success-message"></div>
+
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2>All Counterparties</h2>
+        <a href="register.html" class="btn btn-primary">+ New Counterparty</a>
+      </div>
+
+      <div class="search-bar">
+        <input
+          type="text"
+          id="search-input"
+          class="form-control"
+          placeholder="Search by counterparty ID or name..."
+        >
+        <button id="search-btn" class="btn btn-primary">Search</button>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Counterparty ID</th>
+              <th>Name</th>
+              <th>Route</th>
+              <th>Base Rating</th>
+              <th>Final Rating</th>
+              <th>Last Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="entries-tbody">
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                Loading...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <button id="prev-btn" class="btn btn-secondary btn-small">Previous</button>
+        <span id="page-info">Page 1</span>
+        <button id="next-btn" class="btn btn-secondary btn-small">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { API } from './js/api.js';
+    import { showError, showLoading, formatDate } from './js/app.js';
+
+    const searchInput = document.getElementById('search-input');
+    const searchBtn = document.getElementById('search-btn');
+    const entriesTbody = document.getElementById('entries-tbody');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const pageInfo = document.getElementById('page-info');
+
+    let currentPage = 1;
+    const pageSize = 20;
+    let currentSearch = '';
+    let totalEntries = 0;
+
+    async function loadDashboard(page = 1, search = '') {
+      try {
+        showLoading(true);
+        const offset = (page - 1) * pageSize;
+        const data = await API.getDashboard(search, pageSize, offset);
+
+        totalEntries = data.total;
+        currentPage = page;
+        currentSearch = search;
+
+        // Update page info
+        const totalPages = Math.ceil(totalEntries / pageSize) || 1;
+        pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+        prevBtn.disabled = currentPage === 1;
+        nextBtn.disabled = currentPage >= totalPages;
+
+        // Render table
+        if (data.entries.length === 0) {
+          entriesTbody.innerHTML = `
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                No counterparties found. <a href="register.html">Create one now</a>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        entriesTbody.innerHTML = data.entries.map(entry => {
+          const routeBadge = entry.route
+            ? `<span class="badge badge-info">${entry.route}</span>`
+            : '<span style="color: var(--text-secondary);">-</span>';
+
+          const baseRating = entry.base_rating || '-';
+          const finalRating = entry.final_rating
+            ? `<strong style="color: var(--primary-color);">${entry.final_rating}/6</strong>`
+            : '<span style="color: var(--text-secondary);">-</span>';
+
+          return `
+            <tr>
+              <td><strong>${entry.cp_id || entry.id}</strong></td>
+              <td><strong>${entry.name}</strong></td>
+              <td>${routeBadge}</td>
+              <td>${baseRating}</td>
+              <td>${finalRating}</td>
+              <td>${formatDate(entry.rating_updated_at || entry.created_at)}</td>
+              <td>
+                <a href="review.html?id=${entry.id}" class="btn btn-secondary btn-small">View</a>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (error) {
+        showError(error.message);
+        entriesTbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 2rem; color: var(--error-color);">
+              Error loading data
+            </td>
+          </tr>
+        `;
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    searchBtn.addEventListener('click', () => {
+      loadDashboard(1, searchInput.value.trim());
+    });
+
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        loadDashboard(1, searchInput.value.trim());
+      }
+    });
+
+    prevBtn.addEventListener('click', () => {
+      if (currentPage > 1) {
+        loadDashboard(currentPage - 1, currentSearch);
+      }
+    });
+
+    nextBtn.addEventListener('click', () => {
+      const totalPages = Math.ceil(totalEntries / pageSize);
+      if (currentPage < totalPages) {
+        loadDashboard(currentPage + 1, currentSearch);
+      }
+    });
+
+    // Initial load
+    loadDashboard();
+  </script>
+</body>
+</html>

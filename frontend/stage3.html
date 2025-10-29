@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stage 3 - Fund Rating Survey</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="header">
+    <h1>Fund Rating Survey - Stage 3</h1>
+    <p id="counterparty-info"></p>
+  </div>
+
+  <div class="container">
+    <div id="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="error-message"></div>
+    <div id="success-message"></div>
+
+    <div class="progress-indicator">
+      <span class="progress-step completed">Stage 1</span>
+      <span class="progress-step completed">Stage 2</span>
+      <span class="progress-step active">Stage 3</span>
+    </div>
+
+    <div class="card">
+      <h2>Final Assessment Questions</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+        Answer all 10 multiple-choice questions to calculate the final rating.
+      </p>
+
+      <form id="stage3-form">
+        <div id="questions-container"></div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top: 1.5rem;">Calculate Final Rating</button>
+      </form>
+    </div>
+
+    <div class="nav-links">
+      <a href="index.html" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { API } from './js/api.js';
+    import { showError, showSuccess, showLoading, getCounterpartyId, getCounterpartyName, clearSession } from './js/app.js';
+
+    const form = document.getElementById('stage3-form');
+    const questionsContainer = document.getElementById('questions-container');
+    const counterpartyInfo = document.getElementById('counterparty-info');
+
+    // Check if in edit mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const isEditMode = urlParams.get('edit') === 'true';
+
+    const counterpartyId = getCounterpartyId();
+    const counterpartyName = getCounterpartyName();
+
+    console.log('Stage 3 - Edit mode:', isEditMode);
+    console.log('Stage 3 - counterpartyId:', counterpartyId);
+    console.log('Stage 3 - counterpartyName:', counterpartyName);
+
+    if (!counterpartyId) {
+      window.location.href = 'register.html';
+    } else {
+      counterpartyInfo.textContent = `Counterparty: ${counterpartyName} (ID: ${counterpartyId})`;
+    }
+
+    // Load questions from API
+    async function loadQuestions() {
+      try {
+        showLoading(true);
+        const config = await API.getStage3Config(counterpartyId);
+
+        config.questions.forEach(question => {
+          const questionDiv = document.createElement('div');
+          questionDiv.className = 'question-group';
+
+          const questionText = document.createElement('div');
+          questionText.className = 'question-text';
+          questionText.textContent = question.text;
+          questionDiv.appendChild(questionText);
+
+          const choicesDiv = document.createElement('div');
+          choicesDiv.style.marginTop = '0.75rem';
+
+          question.choices.forEach(choice => {
+            const label = document.createElement('label');
+            label.className = 'radio-label';
+            label.style.display = 'block';
+            label.style.marginBottom = '0.5rem';
+
+            const input = document.createElement('input');
+            input.type = 'radio';
+            input.name = `q${question.no}`;
+            input.value = choice.key;
+            input.required = true;
+
+            label.appendChild(input);
+            label.appendChild(document.createTextNode(` ${choice.label}`));
+            choicesDiv.appendChild(label);
+          });
+
+          questionDiv.appendChild(choicesDiv);
+          questionsContainer.appendChild(questionDiv);
+        });
+
+        // If in edit mode, load and pre-select existing answers
+        if (isEditMode) {
+          await loadExistingAnswers();
+        }
+      } catch (error) {
+        showError(`Failed to load questions: ${error.message}`);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    async function loadExistingAnswers() {
+      try {
+        console.log('Stage 3 - Loading existing answers for editing...');
+        const summary = await API.getSummary(counterpartyId);
+
+        if (summary.stage3 && summary.stage3.answers && summary.stage3.answers.length > 0) {
+          // Pre-select radio buttons based on existing answers
+          summary.stage3.answers.forEach(answer => {
+            const radioInput = document.querySelector(
+              `input[name="q${answer.question_no}"][value="${answer.choice_key}"]`
+            );
+            if (radioInput) {
+              radioInput.checked = true;
+            }
+          });
+
+          console.log('Stage 3 - Existing answers loaded:', summary.stage3.answers);
+          showSuccess('Existing answers loaded. Modify as needed.');
+        } else {
+          console.log('Stage 3 - No existing answers found');
+        }
+      } catch (error) {
+        console.error('Stage 3 - Failed to load existing answers:', error);
+        showError('Could not load existing answers: ' + error.message);
+      }
+    }
+
+    loadQuestions();
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      const answers = [];
+
+      for (let i = 1; i <= 10; i++) {
+        const choice = formData.get(`q${i}`);
+        if (!choice) {
+          showError(`Please answer all questions`);
+          return;
+        }
+        answers.push({
+          question_no: i,
+          choice_key: choice,
+        });
+      }
+
+      try {
+        showLoading(true);
+        const result = await API.submitStage3(counterpartyId, answers);
+
+        // Hide form and show final result
+        form.style.display = 'none';
+
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'card';
+
+        if (isEditMode) {
+          // In edit mode, show options to return or continue editing
+          resultDiv.innerHTML = `
+            <div style="text-align: center;">
+              <h2 style="color: var(--success-color); margin-bottom: 2rem;">✓ Stage 3 Updated!</h2>
+              <div class="rating-display">
+                <h2>Final Rating: ${result.final_rating} / 6</h2>
+                <p>Base Rating: ${result.base_rating} | Weighted Notch: ${result.weighted_notch > 0 ? '+' : ''}${result.weighted_notch.toFixed(2)}</p>
+              </div>
+              <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-direction: column;">
+                <button id="return-summary-btn" class="btn btn-primary btn-block">
+                  Return to Summary
+                </button>
+                <button id="edit-another-btn" class="btn btn-secondary btn-block">
+                  Edit Another Stage
+                </button>
+              </div>
+            </div>
+          `;
+
+          form.parentNode.insertBefore(resultDiv, form);
+
+          document.getElementById('return-summary-btn').addEventListener('click', () => {
+            window.location.href = `review.html?id=${counterpartyId}`;
+          });
+
+          document.getElementById('edit-another-btn').addEventListener('click', () => {
+            window.location.href = `edit.html?id=${counterpartyId}&name=${encodeURIComponent(counterpartyName)}`;
+          });
+        } else {
+          // Normal flow - survey complete
+          resultDiv.innerHTML = `
+            <div style="text-align: center;">
+              <h2 style="color: var(--success-color); margin-bottom: 2rem;">🎉 Survey Complete!</h2>
+              <div class="rating-display">
+                <h2>Final Rating: ${result.final_rating} / 6</h2>
+                <p>Base Rating: ${result.base_rating} | Weighted Notch: ${result.weighted_notch > 0 ? '+' : ''}${result.weighted_notch.toFixed(2)}</p>
+              </div>
+              <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
+                <button id="dashboard-btn" class="btn btn-primary">
+                  Return to Dashboard
+                </button>
+                <button id="new-survey-btn" class="btn btn-secondary">
+                  Start New Survey
+                </button>
+              </div>
+            </div>
+          `;
+
+          form.parentNode.insertBefore(resultDiv, form);
+
+          // Add click handlers
+          document.getElementById('dashboard-btn').addEventListener('click', () => {
+            clearSession();
+            window.location.href = 'index.html';
+          });
+
+          document.getElementById('new-survey-btn').addEventListener('click', () => {
+            clearSession();
+            window.location.href = 'register.html';
+          });
+        }
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        showLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>

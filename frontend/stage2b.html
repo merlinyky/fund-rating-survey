@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stage 2B - Fund Rating Survey</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="header">
+    <h1>Fund Rating Survey - Stage 2 (Route B)</h1>
+    <p id="counterparty-info"></p>
+  </div>
+
+  <div class="container">
+    <div id="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="error-message"></div>
+    <div id="success-message"></div>
+
+    <div class="progress-indicator">
+      <span class="progress-step completed">Stage 1</span>
+      <span class="progress-step active">Stage 2</span>
+      <span class="progress-step">Stage 3</span>
+    </div>
+
+    <div class="card">
+      <h2>Enter Portfolio Data</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+        Add rows for each category. Weights must sum to 1.0 (100%).
+      </p>
+
+      <form id="stage2-form">
+        <div id="rows-container" class="dynamic-rows"></div>
+
+        <button type="button" id="add-row-btn" class="btn btn-secondary btn-small">+ Add Row</button>
+
+        <div id="weight-sum" class="weight-sum">
+          Total Weight: <span id="weight-total">0.00</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top: 1.5rem;">Calculate Base Rating</button>
+      </form>
+    </div>
+
+    <div class="nav-links">
+      <a href="stage1.html" class="btn btn-secondary">← Back to Stage 1</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { API } from './js/api.js';
+    import { showError, showSuccess, showLoading, getCounterpartyId, getCounterpartyName } from './js/app.js';
+
+    const form = document.getElementById('stage2-form');
+    const rowsContainer = document.getElementById('rows-container');
+    const addRowBtn = document.getElementById('add-row-btn');
+    const weightSumDiv = document.getElementById('weight-sum');
+    const weightTotal = document.getElementById('weight-total');
+    const counterpartyInfo = document.getElementById('counterparty-info');
+
+    // Check if in edit mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const isEditMode = urlParams.get('edit') === 'true';
+
+    const counterpartyId = getCounterpartyId();
+    const counterpartyName = getCounterpartyName();
+
+    console.log('Stage 2B - Edit mode:', isEditMode);
+    console.log('Stage 2B - counterpartyId:', counterpartyId);
+    console.log('Stage 2B - counterpartyName:', counterpartyName);
+
+    if (!counterpartyId) {
+      console.error('No counterparty ID found in sessionStorage. Redirecting to dashboard.');
+      showError('Session expired. Please start a new survey from the dashboard.');
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 2000);
+    } else {
+      counterpartyInfo.textContent = `Counterparty: ${counterpartyName} (ID: ${counterpartyId})`;
+
+      // If in edit mode, pre-populate existing data
+      if (isEditMode) {
+        console.log('Stage 2B - Loading existing data for editing...');
+        loadExistingData();
+      }
+    }
+
+    let rowCount = 0;
+
+    async function loadExistingData() {
+      try {
+        showLoading(true);
+        const data = await API.getStage2(counterpartyId);
+
+        if (data.option !== 2) {
+          showError('This survey uses Stage 2 Route A, not Route B');
+          return;
+        }
+
+        // Clear any existing rows
+        rowsContainer.innerHTML = '';
+        rowCount = 0;
+
+        // Pre-populate rows with existing data
+        data.rows.forEach(row => {
+          addRow(row.category, row.sector, row.weight);
+        });
+
+        updateWeightSum();
+        console.log('Stage 2B - Existing data loaded:', data);
+        showSuccess('Existing data loaded. Modify as needed.');
+      } catch (error) {
+        console.error('Stage 2B - Failed to load existing data:', error);
+        showError('Could not load existing data: ' + error.message);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function updateWeightSum() {
+      const weights = Array.from(document.querySelectorAll('.weight-input')).map(input => parseFloat(input.value) || 0);
+      const sum = weights.reduce((acc, w) => acc + w, 0);
+      weightTotal.textContent = sum.toFixed(2);
+
+      if (Math.abs(sum - 1.0) <= 0.01) {
+        weightSumDiv.classList.remove('invalid');
+        weightSumDiv.classList.add('valid');
+      } else {
+        weightSumDiv.classList.remove('valid');
+        weightSumDiv.classList.add('invalid');
+      }
+
+      return sum;
+    }
+
+    function addRow(category = '', sector = '', weight = '') {
+      rowCount++;
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'row-item';
+      rowDiv.dataset.rowId = rowCount;
+
+      rowDiv.innerHTML = `
+        <div class="form-group">
+          <label>Category</label>
+          <select class="form-control category-input" required>
+            <option value="">Select category</option>
+            <option value="Category 1" ${category === 'Category 1' ? 'selected' : ''}>Category 1</option>
+            <option value="Category 2" ${category === 'Category 2' ? 'selected' : ''}>Category 2</option>
+            <option value="Category 3" ${category === 'Category 3' ? 'selected' : ''}>Category 3</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Sector</label>
+          <select class="form-control sector-input" required>
+            <option value="">Select sector</option>
+            <option value="Sector 1" ${sector === 'Sector 1' ? 'selected' : ''}>Sector 1</option>
+            <option value="Sector 2" ${sector === 'Sector 2' ? 'selected' : ''}>Sector 2</option>
+            <option value="Sector 3" ${sector === 'Sector 3' ? 'selected' : ''}>Sector 3</option>
+            <option value="Sector 4" ${sector === 'Sector 4' ? 'selected' : ''}>Sector 4</option>
+            <option value="Sector 5" ${sector === 'Sector 5' ? 'selected' : ''}>Sector 5</option>
+            <option value="Sector 6" ${sector === 'Sector 6' ? 'selected' : ''}>Sector 6</option>
+            <option value="Sector 7" ${sector === 'Sector 7' ? 'selected' : ''}>Sector 7</option>
+            <option value="Sector 8" ${sector === 'Sector 8' ? 'selected' : ''}>Sector 8</option>
+            <option value="Sector 9" ${sector === 'Sector 9' ? 'selected' : ''}>Sector 9</option>
+            <option value="Sector 10" ${sector === 'Sector 10' ? 'selected' : ''}>Sector 10</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Weight</label>
+          <input type="number" class="form-control weight-input" step="0.01" min="0" max="1" placeholder="0.00" value="${weight}" required>
+        </div>
+        <button type="button" class="btn-remove" onclick="this.closest('.row-item').remove(); updateWeightSum();">✕</button>
+      `;
+
+      rowsContainer.appendChild(rowDiv);
+
+      // Add event listener for weight changes
+      rowDiv.querySelector('.weight-input').addEventListener('input', updateWeightSum);
+    }
+
+    // Make updateWeightSum available globally for the remove button
+    window.updateWeightSum = updateWeightSum;
+
+    addRowBtn.addEventListener('click', addRow);
+
+    // Add initial row (unless in edit mode - edit mode will load existing rows)
+    if (!isEditMode) {
+      addRow();
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Collect all rows
+      const rows = [];
+      const rowItems = document.querySelectorAll('.row-item');
+
+      rowItems.forEach(rowItem => {
+        const category = rowItem.querySelector('.category-input').value;
+        const sector = rowItem.querySelector('.sector-input').value;
+        const weight = parseFloat(rowItem.querySelector('.weight-input').value);
+
+        rows.push({ category, sector, weight });
+      });
+
+      if (rows.length === 0) {
+        showError('Please add at least one row');
+        return;
+      }
+
+      const sum = updateWeightSum();
+      if (Math.abs(sum - 1.0) > 0.01) {
+        showError('Weights must sum to 1.0 (100%)');
+        return;
+      }
+
+      try {
+        showLoading(true);
+        const result = await API.submitStage2(counterpartyId, {
+          option: 2,
+          rows,
+        });
+
+        // Hide form and show result
+        form.style.display = 'none';
+
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'card';
+
+        if (isEditMode) {
+          // In edit mode, show options to return or continue editing
+          resultDiv.innerHTML = `
+            <div style="text-align: center;">
+              <h2 style="color: var(--success-color); margin-bottom: 1rem;">✓ Stage 2 Updated!</h2>
+              <div class="rating-display" style="margin: 2rem 0;">
+                <h2>Base Rating: ${result.base_rating} / 6</h2>
+                <p>Portfolio data successfully recalculated</p>
+              </div>
+              <div style="display: flex; gap: 1rem; flex-direction: column;">
+                <button id="return-summary-btn" class="btn btn-primary btn-block">
+                  Return to Summary
+                </button>
+                <button id="edit-another-btn" class="btn btn-secondary btn-block">
+                  Edit Another Stage
+                </button>
+              </div>
+            </div>
+          `;
+
+          form.parentNode.insertBefore(resultDiv, form);
+
+          document.getElementById('return-summary-btn').addEventListener('click', () => {
+            window.location.href = `review.html?id=${counterpartyId}`;
+          });
+
+          document.getElementById('edit-another-btn').addEventListener('click', () => {
+            window.location.href = `edit.html?id=${counterpartyId}&name=${encodeURIComponent(counterpartyName)}`;
+          });
+        } else {
+          // Normal flow - continue to next stage
+          resultDiv.innerHTML = `
+            <div style="text-align: center;">
+              <h2 style="color: var(--success-color); margin-bottom: 1rem;">✓ Stage 2 Complete!</h2>
+              <div class="rating-display" style="margin: 2rem 0;">
+                <h2>Base Rating: ${result.base_rating} / 6</h2>
+                <p>Portfolio data successfully calculated</p>
+              </div>
+              <button id="next-stage-btn" class="btn btn-primary btn-block">
+                Continue to Stage 3 →
+              </button>
+            </div>
+          `;
+
+          form.parentNode.insertBefore(resultDiv, form);
+
+          // Add click handler for next button
+          document.getElementById('next-stage-btn').addEventListener('click', () => {
+            window.location.href = 'stage3.html';
+          });
+        }
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        showLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>

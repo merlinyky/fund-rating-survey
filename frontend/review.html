@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review - Fund Rating Survey</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="header">
+    <h1>Survey Review</h1>
+    <p id="counterparty-info"></p>
+  </div>
+
+  <div class="container">
+    <div id="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="error-message"></div>
+    <div id="success-message"></div>
+
+    <div id="summary-container"></div>
+
+    <div class="nav-links">
+      <a href="index.html" class="btn btn-secondary">← Back to Dashboard</a>
+      <a href="#" id="edit-btn" class="btn btn-primary">Edit Survey</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { API } from './js/api.js';
+    import { showError, showLoading, formatDate, setCounterpartyId, setCounterpartyName } from './js/app.js';
+
+    const counterpartyInfo = document.getElementById('counterparty-info');
+    const summaryContainer = document.getElementById('summary-container');
+    const editBtn = document.getElementById('edit-btn');
+
+    // Get ID from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const counterpartyId = urlParams.get('id');
+
+    if (!counterpartyId) {
+      showError('No counterparty ID provided');
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 2000);
+    }
+
+    async function loadSummary() {
+      try {
+        showLoading(true);
+        const data = await API.getSummary(counterpartyId);
+
+        counterpartyInfo.textContent = `${data.counterparty.name} (ID: ${data.counterparty.id})`;
+
+        let html = '';
+
+        // Counterparty Info
+        html += `
+          <div class="card summary-section">
+            <h3>Counterparty Information</h3>
+            <div class="data-row">
+              <div class="data-label">ID:</div>
+              <div><code>${data.counterparty.id}</code></div>
+            </div>
+            <div class="data-row">
+              <div class="data-label">Name:</div>
+              <div><strong>${data.counterparty.name}</strong></div>
+            </div>
+            <div class="data-row">
+              <div class="data-label">Created:</div>
+              <div>${formatDate(data.counterparty.created_at)}</div>
+            </div>
+          </div>
+        `;
+
+        // Stage 1
+        if (data.stage1) {
+          html += `
+            <div class="card summary-section">
+              <h3>Stage 1 - Questions</h3>
+              <div class="data-row">
+                <div class="data-label">Question 1:</div>
+                <div>${data.stage1.q1 ? 'Yes' : 'No'}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-label">Question 2:</div>
+                <div>${data.stage1.q2 ? 'Yes' : 'No'}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-label">Question 3:</div>
+                <div>${data.stage1.q3 ? 'Yes' : 'No'}</div>
+              </div>
+              <div class="data-row">
+                <div class="data-label">Route:</div>
+                <div><span class="badge badge-info">${data.stage1.route}</span></div>
+              </div>
+            </div>
+          `;
+        }
+
+        // Stage 2
+        if (data.stage2) {
+          html += `
+            <div class="card summary-section">
+              <h3>Stage 2 - Portfolio Data (Route ${data.stage2.option === 1 ? 'A' : 'B'})</h3>
+              <div class="data-row">
+                <div class="data-label">Base Rating:</div>
+                <div><strong style="font-size: 1.25rem; color: var(--primary-color);">${data.stage2.base_rating}/6</strong></div>
+              </div>
+              <div style="margin-top: 1rem;">
+                <strong>Rows:</strong>
+                <table style="margin-top: 0.5rem; width: 100%;">
+                  <thead>
+                    <tr>
+                      ${data.stage2.option === 1 ? '<th>Underline</th>' : '<th>Category</th>'}
+                      <th>Sector</th>
+                      <th>Weight</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${data.stage2.rows.map(row => `
+                      <tr>
+                        ${data.stage2.option === 1
+                          ? `<td>${row.underline}</td>`
+                          : `<td>${row.category}</td>`
+                        }
+                        <td>${row.sector}</td>
+                        <td>${row.weight.toFixed(2)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        }
+
+        // Stage 3 - Question Answers
+        if (data.stage3 && data.stage3.answers && data.stage3.answers.length > 0) {
+          html += `
+            <div class="card summary-section">
+              <h3>Stage 3 - Risk Assessment Questions</h3>
+              <div style="margin-top: 1rem;">
+                <table style="margin-top: 0.5rem; width: 100%;">
+                  <thead>
+                    <tr>
+                      <th style="text-align: left;">Question</th>
+                      <th>Answer</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${data.stage3.answers.map(answer => `
+                      <tr>
+                        <td>Question ${answer.question_no}</td>
+                        <td><strong>${answer.choice_key}</strong></td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        }
+
+        // Final Rating
+        if (data.final_rating) {
+          html += `
+            <div class="card summary-section">
+              <h3>Final Rating</h3>
+              <div class="rating-display">
+                <h2>${data.final_rating.final_rating} / 6</h2>
+                <p>Base Rating (from Stage 2): ${data.final_rating.base_rating} | Weighted Notch (from Stage 3): ${data.final_rating.weighted_notch > 0 ? '+' : ''}${data.final_rating.weighted_notch.toFixed(2)}</p>
+              </div>
+              <div class="data-row">
+                <div class="data-label">Last Updated:</div>
+                <div>${formatDate(data.final_rating.updated_at)}</div>
+              </div>
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="card">
+              <p style="color: var(--warning-color);">Survey not completed. Continue from where you left off:</p>
+              <a href="stage1.html" class="btn btn-primary" style="margin-top: 1rem;">Continue Survey</a>
+            </div>
+          `;
+        }
+
+        summaryContainer.innerHTML = html;
+
+        // Set up edit button
+        editBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          setCounterpartyId(data.counterparty.id);
+          setCounterpartyName(data.counterparty.name);
+          window.location.href = `edit.html?id=${data.counterparty.id}&name=${encodeURIComponent(data.counterparty.name)}`;
+        });
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    loadSummary();
+  </script>
+</body>
+</html>

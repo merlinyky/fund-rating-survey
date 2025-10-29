@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stage 1 - Fund Rating Survey</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="header">
+    <h1>Fund Rating Survey - Stage 1</h1>
+    <p id="counterparty-info"></p>
+  </div>
+
+  <div class="container">
+    <div id="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="error-message"></div>
+    <div id="success-message"></div>
+
+    <div class="progress-indicator">
+      <span class="progress-step active">Stage 1</span>
+      <span class="progress-step">Stage 2</span>
+      <span class="progress-step">Stage 3</span>
+    </div>
+
+    <div class="card">
+      <h2>Answer the following questions</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 2rem;">Please answer all three questions with Yes or No.</p>
+
+      <form id="stage1-form">
+        <div class="question-group">
+          <div class="question-text">Stage 1 Question 1</div>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="q1" value="true" required> Yes
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="q1" value="false" required> No
+            </label>
+          </div>
+        </div>
+
+        <div class="question-group">
+          <div class="question-text">Stage 1 Question 2</div>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="q2" value="true" required> Yes
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="q2" value="false" required> No
+            </label>
+          </div>
+        </div>
+
+        <div class="question-group">
+          <div class="question-text">Stage 1 Question 3</div>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="q3" value="true" required> Yes
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="q3" value="false" required> No
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Continue to Stage 2</button>
+      </form>
+    </div>
+
+    <div class="nav-links">
+      <a href="index.html" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { API } from './js/api.js';
+    import { showError, showSuccess, showLoading, getCounterpartyId, getCounterpartyName, setStage1Route } from './js/app.js';
+
+    const form = document.getElementById('stage1-form');
+    const counterpartyInfo = document.getElementById('counterparty-info');
+
+    // Check if in edit mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const isEditMode = urlParams.get('edit') === 'true';
+
+    // Check if we have a counterparty ID
+    const counterpartyId = getCounterpartyId();
+    const counterpartyName = getCounterpartyName();
+
+    if (!counterpartyId) {
+      showError('No counterparty selected. Redirecting to registration...');
+      setTimeout(() => {
+        window.location.href = 'register.html';
+      }, 2000);
+    } else {
+      counterpartyInfo.textContent = `Counterparty: ${counterpartyName} (ID: ${counterpartyId})`;
+
+      // If in edit mode, pre-populate existing answers
+      if (isEditMode) {
+        console.log('Stage 1 - Edit mode: Loading existing answers...');
+        loadExistingAnswers();
+      }
+    }
+
+    // Store the original route for comparison in edit mode
+    let originalRoute = null;
+
+    async function loadExistingAnswers() {
+      try {
+        showLoading(true);
+        const data = await API.getStage1(counterpartyId);
+
+        // Store the original route
+        originalRoute = data.route;
+
+        // Pre-select radio buttons
+        document.querySelector(`input[name="q1"][value="${data.q1}"]`).checked = true;
+        document.querySelector(`input[name="q2"][value="${data.q2}"]`).checked = true;
+        document.querySelector(`input[name="q3"][value="${data.q3}"]`).checked = true;
+
+        console.log('Stage 1 - Existing answers loaded:', data);
+        console.log('Stage 1 - Original route:', originalRoute);
+        showSuccess('Existing answers loaded. Modify as needed.');
+      } catch (error) {
+        console.error('Stage 1 - Failed to load existing answers:', error);
+        showError('Could not load existing answers: ' + error.message);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      const answers = {
+        q1: formData.get('q1') === 'true',
+        q2: formData.get('q2') === 'true',
+        q3: formData.get('q3') === 'true',
+      };
+
+      try {
+        showLoading(true);
+        const result = await API.submitStage1(counterpartyId, answers);
+
+        setStage1Route(result.route);
+
+        // Check if route changed in edit mode
+        const routeChanged = isEditMode && originalRoute && originalRoute !== result.route;
+
+        if (routeChanged) {
+          console.log(`Stage 1 - Route changed from ${originalRoute} to ${result.route}`);
+          console.log('Stage 1 - Stage 2 data needs to be re-entered');
+        }
+
+        // Hide form and show success message with next button
+        form.style.display = 'none';
+
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'card';
+
+        if (isEditMode) {
+          if (routeChanged) {
+            // Route changed - warn user and redirect to Stage 2 editing
+            resultDiv.innerHTML = `
+              <div style="text-align: center;">
+                <h2 style="color: #ffc107; margin-bottom: 1rem;">⚠️ Route Changed</h2>
+                <p style="font-size: 1.125rem; margin-bottom: 1rem;">
+                  Route changed from <strong>${originalRoute}</strong> to <strong>${result.route}</strong>
+                </p>
+                <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 1rem; margin-bottom: 1.5rem; text-align: left;">
+                  <p style="color: #856404; margin: 0; font-size: 0.95rem;">
+                    <strong>Important:</strong> Because the routing has changed, Stage 2 data needs to be re-entered.
+                    You will be redirected to Stage 2 editing shortly...
+                  </p>
+                </div>
+                <div class="spinner" style="margin: 0 auto;"></div>
+              </div>
+            `;
+
+            form.parentNode.insertBefore(resultDiv, form);
+
+            // Redirect to correct Stage 2 page after 3 seconds
+            setTimeout(() => {
+              if (result.route === 'A') {
+                window.location.href = 'stage2a.html?edit=true';
+              } else {
+                window.location.href = 'stage2b.html?edit=true';
+              }
+            }, 3000);
+          } else {
+            // Route didn't change - show normal edit mode options
+            resultDiv.innerHTML = `
+              <div style="text-align: center;">
+                <h2 style="color: var(--success-color); margin-bottom: 1rem;">✓ Stage 1 Updated!</h2>
+                <p style="font-size: 1.125rem; margin-bottom: 2rem;">
+                  Your answers have been saved. Route: <strong>${result.route}</strong>
+                </p>
+                <div style="display: flex; gap: 1rem; flex-direction: column;">
+                  <button id="return-summary-btn" class="btn btn-primary btn-block">
+                    Return to Summary
+                  </button>
+                  <button id="edit-another-btn" class="btn btn-secondary btn-block">
+                    Edit Another Stage
+                  </button>
+                </div>
+              </div>
+            `;
+
+            form.parentNode.insertBefore(resultDiv, form);
+
+            document.getElementById('return-summary-btn').addEventListener('click', () => {
+              window.location.href = `review.html?id=${counterpartyId}`;
+            });
+
+            document.getElementById('edit-another-btn').addEventListener('click', () => {
+              window.location.href = `edit.html?id=${counterpartyId}&name=${encodeURIComponent(counterpartyName)}`;
+            });
+          }
+        } else {
+          // Normal flow - continue to next stage
+          resultDiv.innerHTML = `
+            <div style="text-align: center;">
+              <h2 style="color: var(--success-color); margin-bottom: 1rem;">✓ Stage 1 Complete!</h2>
+              <p style="font-size: 1.125rem; margin-bottom: 2rem;">
+                Based on your answers, you'll proceed to <strong>Stage 2 Route ${result.route}</strong>
+              </p>
+              <button id="next-stage-btn" class="btn btn-primary btn-block">
+                Continue to Stage 2 →
+              </button>
+            </div>
+          `;
+
+          form.parentNode.insertBefore(resultDiv, form);
+
+          // Add click handler for next button
+          document.getElementById('next-stage-btn').addEventListener('click', () => {
+            console.log('Stage 1 - Navigating to Stage 2');
+            console.log('Stage 1 - Route:', result.route);
+            console.log('Stage 1 - counterpartyId before navigation:', getCounterpartyId());
+            console.log('Stage 1 - counterpartyName before navigation:', getCounterpartyName());
+            console.log('Stage 1 - sessionStorage contents:', sessionStorage);
+
+            if (result.route === 'A') {
+              window.location.href = 'stage2a.html';
+            } else {
+              window.location.href = 'stage2b.html';
+            }
+          });
+        }
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        showLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>

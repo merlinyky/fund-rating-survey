@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Survey - Fund Rating Survey</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="header">
+    <h1>Edit Survey</h1>
+    <p id="counterparty-info"></p>
+  </div>
+
+  <div class="container">
+    <div id="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="error-message"></div>
+    <div id="success-message"></div>
+
+    <div class="card">
+      <h2>Select Stage to Edit</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+        Choose which stage you want to modify. Existing answers will be pre-populated.
+      </p>
+
+      <div style="display: grid; gap: 1rem;">
+        <button id="edit-stage1-btn" class="btn btn-primary btn-block" style="padding: 1.5rem;">
+          <div style="font-size: 1.25rem; margin-bottom: 0.25rem;">Edit Stage 1</div>
+          <div style="font-size: 0.875rem; opacity: 0.8;">Three yes/no questions</div>
+        </button>
+
+        <button id="edit-stage2-btn" class="btn btn-primary btn-block" style="padding: 1.5rem;">
+          <div style="font-size: 1.25rem; margin-bottom: 0.25rem;">Edit Stage 2</div>
+          <div style="font-size: 0.875rem; opacity: 0.8;">Portfolio data (Route A or B)</div>
+        </button>
+
+        <button id="edit-stage3-btn" class="btn btn-primary btn-block" style="padding: 1.5rem;">
+          <div style="font-size: 1.25rem; margin-bottom: 0.25rem;">Edit Stage 3</div>
+          <div style="font-size: 0.875rem; opacity: 0.8;">Multiple choice questions</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="nav-links">
+      <a href="index.html" class="btn btn-secondary">← Back to Dashboard</a>
+      <a href="#" id="view-summary-btn" class="btn btn-secondary">View Summary</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { API } from './js/api.js';
+    import { setCounterpartyId, setCounterpartyName, showError } from './js/app.js';
+
+    // Get ID from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const counterpartyId = urlParams.get('id');
+
+    if (!counterpartyId) {
+      showError('No counterparty ID provided');
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 2000);
+    } else {
+      // Store in session for stage pages
+      setCounterpartyId(counterpartyId);
+
+      // Get counterparty name from URL if provided
+      const name = urlParams.get('name');
+      if (name) {
+        setCounterpartyName(name);
+        document.getElementById('counterparty-info').textContent = `Editing: ${name}`;
+      } else {
+        document.getElementById('counterparty-info').textContent = `Counterparty ID: ${counterpartyId}`;
+      }
+    }
+
+    // Edit buttons
+    document.getElementById('edit-stage1-btn').addEventListener('click', () => {
+      window.location.href = `stage1.html?edit=true`;
+    });
+
+    document.getElementById('edit-stage2-btn').addEventListener('click', async () => {
+      // Need to determine which Stage 2 page (A or B) based on route from Stage 1
+      try {
+        const stage1Data = await API.getStage1(counterpartyId);
+        if (stage1Data.route === 'A') {
+          window.location.href = `stage2a.html?edit=true`;
+        } else {
+          window.location.href = `stage2b.html?edit=true`;
+        }
+      } catch (error) {
+        showError('Could not load Stage 1 data. Please complete Stage 1 first.');
+      }
+    });
+
+    document.getElementById('edit-stage3-btn').addEventListener('click', () => {
+      window.location.href = `stage3.html?edit=true`;
+    });
+
+    document.getElementById('view-summary-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.href = `review.html?id=${counterpartyId}`;
+    });
+  </script>
+</body>
+</html>

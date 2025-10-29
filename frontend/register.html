@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register Counterparty - Fund Rating Survey</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="header">
+    <h1>Fund Rating Survey</h1>
+    <p>Register a new counterparty to begin</p>
+  </div>
+
+  <div class="container">
+    <div id="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="error-message"></div>
+    <div id="success-message"></div>
+
+    <div class="card">
+      <h2>Register Counterparty</h2>
+      <p style="color: var(--text-secondary); margin: 1rem 0;">Enter the name of the fund or counterparty you want to rate.</p>
+
+      <form id="register-form">
+        <div class="form-group">
+          <label for="counterparty-id">Counterparty ID *</label>
+          <input
+            type="text"
+            id="counterparty-id"
+            class="form-control"
+            placeholder="Enter unique counterparty ID (e.g., FUND001)"
+            required
+            autofocus
+          >
+          <small style="color: var(--text-secondary); margin-top: 0.25rem; display: block;">
+            This is your custom identifier for the counterparty
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="counterparty-name">Counterparty Name *</label>
+          <input
+            type="text"
+            id="counterparty-name"
+            class="form-control"
+            placeholder="Enter counterparty name"
+            required
+          >
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Register & Start Survey</button>
+      </form>
+    </div>
+
+    <div class="nav-links">
+      <a href="index.html" class="btn btn-secondary">← Back to Dashboard</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { API } from './js/api.js';
+    import { showError, showSuccess, showLoading, setCounterpartyId, setCounterpartyName } from './js/app.js';
+
+    const form = document.getElementById('register-form');
+    const cpIdInput = document.getElementById('counterparty-id');
+    const nameInput = document.getElementById('counterparty-name');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const cpId = cpIdInput.value.trim();
+      const name = nameInput.value.trim();
+
+      if (!cpId) {
+        showError('Please enter a counterparty ID');
+        return;
+      }
+
+      if (!name) {
+        showError('Please enter a counterparty name');
+        return;
+      }
+
+      try {
+        showLoading(true);
+        const result = await API.createCounterparty(cpId, name);
+
+        setCounterpartyId(result.id);
+        setCounterpartyName(result.name);
+
+        // Hide form and show success with start button
+        form.style.display = 'none';
+
+        const successDiv = document.createElement('div');
+        successDiv.className = 'card';
+        successDiv.innerHTML = `
+          <div style="text-align: center;">
+            <h2 style="color: var(--success-color); margin-bottom: 1rem;">✓ Registration Complete!</h2>
+            <p style="font-size: 1.125rem; margin-bottom: 0.5rem;">
+              <strong>${result.name}</strong>
+            </p>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+              Counterparty ID: <strong>${result.cp_id}</strong>
+            </p>
+            <button id="start-survey-btn" class="btn btn-primary btn-block">
+              Start Survey →
+            </button>
+          </div>
+        `;
+
+        form.parentNode.insertBefore(successDiv, form);
+
+        // Add click handler
+        document.getElementById('start-survey-btn').addEventListener('click', () => {
+          window.location.href = 'stage1.html';
+        });
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        showLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>

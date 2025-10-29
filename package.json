@@ -1,0 +1,19 @@
+{
+  "name": "data-collector",
+  "version": "1.0.0",
+  "description": "Fund rating survey POC",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev frontend --binding DB=fund-rating-db",
+    "deploy": "wrangler pages deploy frontend",
+    "schema": "wrangler d1 execute fund-rating-db --remote --file=schema.sql",
+    "init-db": "./init-test-db.sh",
+    "seed": "wrangler d1 execute fund-rating-db --local --file=seed-test-data.sql",
+    "reset-db": "rm -rf .wrangler/state/ && ./init-test-db.sh"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20231218.0",
+    "typescript": "^5.3.3",
+    "wrangler": "^3.22.0"
+  }
+}
