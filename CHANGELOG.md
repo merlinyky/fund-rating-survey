@@ -4,6 +4,99 @@ Project history of significant changes, pivots, and decisions.
 
 ---
 
+## 2025-10-29 - JSON Configuration System (Deployed)
+
+**Type**: Major Refactoring
+**Branch**: main
+**Commit**: 5811c26
+**Status**: Deployed to production ✅
+
+**Changes**:
+- Externalized all business logic to JSON configuration files
+- Created `config/survey-config.json` with all stage definitions:
+  - Stage 1: Questions and routing threshold
+  - Stage 2A: Sector scores and calculation formula
+  - Stage 2B: Category factors, sector scores, normalization divisor
+  - Stage 3: 10 questions with weights, choices, and notch values
+  - Rating scale metadata and interpretation
+- Created `config/README.md` - Comprehensive configuration guide
+- Implemented `functions/utils/config-loader.ts` - Configuration loader with validation
+- Updated `functions/utils/calculations.ts` - Removed all hardcoded constants
+- Updated `functions/api/stage3/[id].ts` - Uses config-loader
+- Removed `functions/utils/stage3-config.ts` - Deprecated, replaced by JSON
+- Updated `tsconfig.json` - Added JSON module support
+
+**Benefits**:
+- Single source of truth for all business logic
+- Easy to modify weights, scores, questions without code changes
+- No configuration drift between different files
+- Version control for configuration changes
+- Automatic weight validation on startup
+
+**Testing**:
+- All calculations verified correct locally
+- Config loads successfully: "Loaded survey configuration version 1.0.0"
+- Deployed and tested in production
+
+**Rationale**: Hardcoded business logic was scattered across multiple TypeScript files, making it difficult to modify scoring formulas or question weights. Externalizing to JSON makes the system more maintainable and allows non-developers to modify configuration.
+
+---
+
+## 2025-10-29 - Python Calculation Engine (Feature Branch)
+
+**Type**: New Feature
+**Branch**: feature_python
+**Commit**: 4e37373
+**Status**: Ready for testing (not deployed)
+
+**Changes**:
+- Created pure Python implementation of all rating calculations
+- `python-engine/calculation_engine.py` (300+ lines):
+  - Stage 1: Route determination
+  - Stage 2A: Base rating (Route A)
+  - Stage 2B: Base rating (Route B)
+  - Stage 3: Final rating calculation
+  - Weight validation
+  - Well-documented with examples
+- `python-engine/api_service.py` (200+ lines):
+  - FastAPI REST API service
+  - 6 endpoints for all calculations
+  - Automatic API documentation (Swagger/ReDoc)
+  - Request/response validation with Pydantic
+  - CORS enabled
+- `python-engine/requirements.txt` - Minimal dependencies
+- `python-engine/README.md` - Complete documentation
+
+**Benefits**:
+- Familiar to data scientists and model developers
+- Easy to modify complex algorithms
+- Access to Python ecosystem (NumPy, Pandas, scikit-learn)
+- Independent from TypeScript codebase
+- Can be deployed separately
+
+**Testing**:
+- Service runs on localhost:8000
+- All endpoints tested and working
+- Calculations match TypeScript implementation
+- Interactive API docs available
+
+**Rationale**: Model developers are more familiar with Python for complex calculations. Having a Python engine allows for easier experimentation with machine learning models and advanced statistical methods while keeping the TypeScript UI layer unchanged.
+
+---
+
+## 2025-10-29 - Wrangler v4 Upgrade
+
+**Type**: Infrastructure
+**Changes**:
+- Upgraded Wrangler from v3.22.0 to v4.45.2
+- Updated GitHub Actions workflow to use Node.js v20 (required by Wrangler v4)
+- Removed unnecessary GitHub Pages deployment step
+- Fixed deployment pipeline issues
+
+**Impact**: Eliminated version warnings, improved build times, deployments now succeed
+
+---
+
 ## 2025-10-29 - Documentation Consolidation
 
 **Type**: Documentation
