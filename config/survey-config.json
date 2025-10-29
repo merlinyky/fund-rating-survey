@@ -1,0 +1,488 @@
+{
+  "version": "1.0.0",
+  "description": "Fund Rating Survey Configuration - All stages, questions, and business logic",
+  "stages": {
+    "stage1": {
+      "title": "Initial Assessment",
+      "description": "Three yes/no questions to determine survey route",
+      "questions": [
+        {
+          "id": "q1",
+          "text": "Stage 1 Question 1",
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "id": "q2",
+          "text": "Stage 1 Question 2",
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "id": "q3",
+          "text": "Stage 1 Question 3",
+          "type": "boolean",
+          "required": true
+        }
+      ],
+      "routing": {
+        "description": "Determine Route A or B based on sum of Yes answers",
+        "rule": "sum_yes_answers >= 2 ? 'A' : 'B'",
+        "threshold": 2
+      }
+    },
+    "stage2": {
+      "routeA": {
+        "title": "Portfolio Analysis - Route A",
+        "description": "Underline-based sector weighting",
+        "fields": [
+          {
+            "name": "underline",
+            "label": "Underline",
+            "type": "text",
+            "required": true
+          },
+          {
+            "name": "sector",
+            "label": "Sector",
+            "type": "select",
+            "required": true,
+            "options": [
+              "Sector 1",
+              "Sector 2",
+              "Sector 3"
+            ]
+          },
+          {
+            "name": "weight",
+            "label": "Weight",
+            "type": "number",
+            "required": true,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          }
+        ],
+        "validation": {
+          "weights_must_sum_to": 1.0,
+          "tolerance": 0.01
+        },
+        "calculation": {
+          "description": "Calculate base rating from weighted sector scores",
+          "formula": "ceil(sum(weight * sector_score) * 6)",
+          "min_rating": 1,
+          "max_rating": 6,
+          "sector_scores": {
+            "Sector 1": 0.2,
+            "Sector 2": 0.4,
+            "Sector 3": 0.6
+          }
+        }
+      },
+      "routeB": {
+        "title": "Portfolio Analysis - Route B",
+        "description": "Category and sector-based weighting",
+        "fields": [
+          {
+            "name": "category",
+            "label": "Category",
+            "type": "select",
+            "required": true,
+            "options": [
+              "Category 1",
+              "Category 2",
+              "Category 3"
+            ]
+          },
+          {
+            "name": "sector",
+            "label": "Sector",
+            "type": "select",
+            "required": true,
+            "options": [
+              "Sector 1",
+              "Sector 2",
+              "Sector 3",
+              "Sector 4",
+              "Sector 5",
+              "Sector 6",
+              "Sector 7",
+              "Sector 8",
+              "Sector 9",
+              "Sector 10"
+            ]
+          },
+          {
+            "name": "weight",
+            "label": "Weight",
+            "type": "number",
+            "required": true,
+            "min": 0,
+            "max": 1,
+            "step": 0.01
+          }
+        ],
+        "validation": {
+          "weights_must_sum_to": 1.0,
+          "tolerance": 0.01
+        },
+        "calculation": {
+          "description": "Calculate base rating from weighted category-sector scores",
+          "formula": "ceil((sum(weight * category_factor * sector_score) / 1.2) * 6)",
+          "min_rating": 1,
+          "max_rating": 6,
+          "normalization_divisor": 1.2,
+          "category_factors": {
+            "Category 1": 0.8,
+            "Category 2": 1.0,
+            "Category 3": 1.2
+          },
+          "sector_scores": {
+            "Sector 1": 0.1,
+            "Sector 2": 0.2,
+            "Sector 3": 0.3,
+            "Sector 4": 0.4,
+            "Sector 5": 0.5,
+            "Sector 6": 0.6,
+            "Sector 7": 0.7,
+            "Sector 8": 0.8,
+            "Sector 9": 0.9,
+            "Sector 10": 1.0
+          }
+        }
+      }
+    },
+    "stage3": {
+      "title": "Risk Assessment",
+      "description": "10 questions to adjust final rating with weighted notches",
+      "questions": [
+        {
+          "no": 1,
+          "text": "Question 1: How would you rate the overall risk profile?",
+          "weight": 0.15,
+          "choices": {
+            "A": {
+              "label": "Q1 Choice 1",
+              "notch": -2
+            },
+            "B": {
+              "label": "Q1 Choice 2",
+              "notch": 0
+            },
+            "C": {
+              "label": "Q1 Choice 3",
+              "notch": 2
+            }
+          }
+        },
+        {
+          "no": 2,
+          "text": "Question 2: What is the fund's investment strategy?",
+          "weight": 0.12,
+          "choices": {
+            "A": {
+              "label": "Q2 Choice 1",
+              "notch": -2
+            },
+            "B": {
+              "label": "Q2 Choice 2",
+              "notch": -1
+            },
+            "C": {
+              "label": "Q2 Choice 3",
+              "notch": 1
+            },
+            "D": {
+              "label": "Q2 Choice 4",
+              "notch": 2
+            }
+          }
+        },
+        {
+          "no": 3,
+          "text": "Question 3: How diversified is the portfolio?",
+          "weight": 0.10,
+          "choices": {
+            "A": {
+              "label": "Q3 Choice 1",
+              "notch": -2
+            },
+            "B": {
+              "label": "Q3 Choice 2",
+              "notch": -1
+            },
+            "C": {
+              "label": "Q3 Choice 3",
+              "notch": 0
+            },
+            "D": {
+              "label": "Q3 Choice 4",
+              "notch": 1
+            },
+            "E": {
+              "label": "Q3 Choice 5",
+              "notch": 2
+            }
+          }
+        },
+        {
+          "no": 4,
+          "text": "Question 4: What is the management team's track record?",
+          "weight": 0.13,
+          "choices": {
+            "A": {
+              "label": "Q4 Choice 1",
+              "notch": -3
+            },
+            "B": {
+              "label": "Q4 Choice 2",
+              "notch": -2
+            },
+            "C": {
+              "label": "Q4 Choice 3",
+              "notch": -1
+            },
+            "D": {
+              "label": "Q4 Choice 4",
+              "notch": 0
+            },
+            "E": {
+              "label": "Q4 Choice 5",
+              "notch": 1
+            },
+            "F": {
+              "label": "Q4 Choice 6",
+              "notch": 3
+            }
+          }
+        },
+        {
+          "no": 5,
+          "text": "Question 5: How liquid are the fund's assets?",
+          "weight": 0.08,
+          "choices": {
+            "A": {
+              "label": "Q5 Choice 1",
+              "notch": -1
+            },
+            "B": {
+              "label": "Q5 Choice 2",
+              "notch": 1
+            }
+          }
+        },
+        {
+          "no": 6,
+          "text": "Question 6: What is the fund's leverage ratio?",
+          "weight": 0.11,
+          "choices": {
+            "A": {
+              "label": "Q6 Choice 1",
+              "notch": -3
+            },
+            "B": {
+              "label": "Q6 Choice 2",
+              "notch": -2
+            },
+            "C": {
+              "label": "Q6 Choice 3",
+              "notch": -1
+            },
+            "D": {
+              "label": "Q6 Choice 4",
+              "notch": 0
+            },
+            "E": {
+              "label": "Q6 Choice 5",
+              "notch": 1
+            },
+            "F": {
+              "label": "Q6 Choice 6",
+              "notch": 2
+            },
+            "G": {
+              "label": "Q6 Choice 7",
+              "notch": 3
+            }
+          }
+        },
+        {
+          "no": 7,
+          "text": "Question 7: How transparent is the reporting?",
+          "weight": 0.09,
+          "choices": {
+            "A": {
+              "label": "Q7 Choice 1",
+              "notch": -2
+            },
+            "B": {
+              "label": "Q7 Choice 2",
+              "notch": -1
+            },
+            "C": {
+              "label": "Q7 Choice 3",
+              "notch": 1
+            },
+            "D": {
+              "label": "Q7 Choice 4",
+              "notch": 2
+            }
+          }
+        },
+        {
+          "no": 8,
+          "text": "Question 8: What is the fund's historical performance?",
+          "weight": 0.10,
+          "choices": {
+            "A": {
+              "label": "Q8 Choice 1",
+              "notch": -3
+            },
+            "B": {
+              "label": "Q8 Choice 2",
+              "notch": -2
+            },
+            "C": {
+              "label": "Q8 Choice 3",
+              "notch": -1
+            },
+            "D": {
+              "label": "Q8 Choice 4",
+              "notch": 0
+            },
+            "E": {
+              "label": "Q8 Choice 5",
+              "notch": 1
+            },
+            "F": {
+              "label": "Q8 Choice 6",
+              "notch": 2
+            },
+            "G": {
+              "label": "Q8 Choice 7",
+              "notch": 2
+            },
+            "H": {
+              "label": "Q8 Choice 8",
+              "notch": 3
+            }
+          }
+        },
+        {
+          "no": 9,
+          "text": "Question 9: How strong is the risk management framework?",
+          "weight": 0.07,
+          "choices": {
+            "A": {
+              "label": "Q9 Choice 1",
+              "notch": -3
+            },
+            "B": {
+              "label": "Q9 Choice 2",
+              "notch": -2
+            },
+            "C": {
+              "label": "Q9 Choice 3",
+              "notch": -2
+            },
+            "D": {
+              "label": "Q9 Choice 4",
+              "notch": -1
+            },
+            "E": {
+              "label": "Q9 Choice 5",
+              "notch": 0
+            },
+            "F": {
+              "label": "Q9 Choice 6",
+              "notch": 1
+            },
+            "G": {
+              "label": "Q9 Choice 7",
+              "notch": 2
+            },
+            "H": {
+              "label": "Q9 Choice 8",
+              "notch": 2
+            },
+            "I": {
+              "label": "Q9 Choice 9",
+              "notch": 3
+            }
+          }
+        },
+        {
+          "no": 10,
+          "text": "Question 10: What is the regulatory compliance status?",
+          "weight": 0.05,
+          "choices": {
+            "A": {
+              "label": "Q10 Choice 1",
+              "notch": -3
+            },
+            "B": {
+              "label": "Q10 Choice 2",
+              "notch": -3
+            },
+            "C": {
+              "label": "Q10 Choice 3",
+              "notch": -2
+            },
+            "D": {
+              "label": "Q10 Choice 4",
+              "notch": -1
+            },
+            "E": {
+              "label": "Q10 Choice 5",
+              "notch": -1
+            },
+            "F": {
+              "label": "Q10 Choice 6",
+              "notch": 0
+            },
+            "G": {
+              "label": "Q10 Choice 7",
+              "notch": 1
+            },
+            "H": {
+              "label": "Q10 Choice 8",
+              "notch": 2
+            },
+            "I": {
+              "label": "Q10 Choice 9",
+              "notch": 2
+            },
+            "J": {
+              "label": "Q10 Choice 10",
+              "notch": 3
+            }
+          }
+        }
+      ],
+      "validation": {
+        "weights_must_sum_to": 1.0,
+        "tolerance": 0.01
+      },
+      "calculation": {
+        "description": "Calculate final rating by adding weighted notch to base rating",
+        "formula": "round(base_rating + sum(question_weight * choice_notch))",
+        "min_rating": 1,
+        "max_rating": 6,
+        "weighted_notch_precision": 2
+      }
+    }
+  },
+  "rating_scale": {
+    "min": 1,
+    "max": 6,
+    "description": "Lower is better (1 = best, 6 = worst)",
+    "interpretation": {
+      "1": "Excellent",
+      "2": "Very Good",
+      "3": "Good",
+      "4": "Fair",
+      "5": "Poor",
+      "6": "Very Poor"
+    }
+  }
+}

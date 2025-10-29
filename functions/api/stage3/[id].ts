@@ -2,7 +2,7 @@
 
 import { Env, jsonResponse, errorResponse, corsHeaders } from '../../utils/db';
 import { calculateFinalRating } from '../../utils/calculations';
-import { STAGE3_QUESTIONS } from '../../utils/stage3-config';
+import { getStage3Questions } from '../../utils/config-loader';
 
 interface Answer {
   question_no: number;
@@ -10,7 +10,9 @@ interface Answer {
 }
 
 export async function onRequestGet(context: { request: Request; env: Env; params: { id: string } }) {
-  // Return Stage 3 configuration (questions and choices)
+  // Return Stage 3 configuration (questions and choices) from JSON config
+  const STAGE3_QUESTIONS = getStage3Questions();
+
   return jsonResponse({
     questions: STAGE3_QUESTIONS.map((q) => ({
       no: q.no,
@@ -56,6 +58,8 @@ export async function onRequestPost(context: { request: Request; env: Env; param
     const baseRating = stage2Result.base_rating as number;
 
     // Validate all answers
+    const STAGE3_QUESTIONS = getStage3Questions();
+
     for (const answer of answers) {
       if (!answer.question_no || !answer.choice_key) {
         return errorResponse('Each answer must have question_no and choice_key');

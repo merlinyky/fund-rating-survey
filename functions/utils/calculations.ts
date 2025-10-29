@@ -1,17 +1,21 @@
 // Rating calculation algorithms
+// Updated to use JSON configuration
 
-import { STAGE3_QUESTIONS } from './stage3-config';
+import {
+  getStage3Questions,
+  getSectorScoresRouteA,
+  getCategoryFactors,
+  getSectorScoresRouteB,
+  getNormalizationDivisor,
+  getRoutingThreshold,
+} from './config-loader';
 
 // Stage 2A: Option 1 scoring
-const SECTOR_SCORES = {
-  'Sector 1': 0.2,
-  'Sector 2': 0.4,
-  'Sector 3': 0.6,
-};
-
 export function calculateStage2ABaseRating(rows: Array<{ sector: string; weight: number }>): number {
+  const SECTOR_SCORES = getSectorScoresRouteA();
+
   const score = rows.reduce((sum, row) => {
-    const sectorScore = SECTOR_SCORES[row.sector as keyof typeof SECTOR_SCORES] || 0;
+    const sectorScore = SECTOR_SCORES[row.sector] || 0;
     return sum + row.weight * sectorScore;
   }, 0);
 
@@ -20,35 +24,20 @@ export function calculateStage2ABaseRating(rows: Array<{ sector: string; weight:
 }
 
 // Stage 2B: Option 2 scoring
-const CATEGORY_FACTORS = {
-  'Category 1': 0.8,
-  'Category 2': 1.0,
-  'Category 3': 1.2,
-};
-
-const SECTOR_SCORES_2B: Record<string, number> = {
-  'Sector 1': 0.1,
-  'Sector 2': 0.2,
-  'Sector 3': 0.3,
-  'Sector 4': 0.4,
-  'Sector 5': 0.5,
-  'Sector 6': 0.6,
-  'Sector 7': 0.7,
-  'Sector 8': 0.8,
-  'Sector 9': 0.9,
-  'Sector 10': 1.0,
-};
-
 export function calculateStage2BBaseRating(
   rows: Array<{ category: string; sector: string; weight: number }>
 ): number {
+  const CATEGORY_FACTORS = getCategoryFactors();
+  const SECTOR_SCORES_2B = getSectorScoresRouteB();
+  const NORMALIZATION_DIVISOR = getNormalizationDivisor();
+
   const score = rows.reduce((sum, row) => {
-    const categoryFactor = CATEGORY_FACTORS[row.category as keyof typeof CATEGORY_FACTORS] || 1.0;
+    const categoryFactor = CATEGORY_FACTORS[row.category] || 1.0;
     const sectorScore = SECTOR_SCORES_2B[row.sector] || 0;
     return sum + row.weight * categoryFactor * sectorScore;
   }, 0);
 
-  const normalized = score / 1.2;
+  const normalized = score / NORMALIZATION_DIVISOR;
   const baseRating = Math.ceil(normalized * 6);
   return Math.max(1, Math.min(6, baseRating));
 }
@@ -58,6 +47,8 @@ export function calculateFinalRating(
   baseRating: number,
   answers: Array<{ question_no: number; choice_key: string }>
 ): { weighted_notch: number; final_rating: number } {
+  const STAGE3_QUESTIONS = getStage3Questions();
+
   const weightedNotch = answers.reduce((sum, answer) => {
     const question = STAGE3_QUESTIONS.find((q) => q.no === answer.question_no);
     if (!question) return sum;
@@ -79,8 +70,9 @@ export function calculateFinalRating(
 
 // Stage 1: Route determination
 export function determineRoute(q1: boolean, q2: boolean, q3: boolean): 'A' | 'B' {
+  const THRESHOLD = getRoutingThreshold();
   const sum = (q1 ? 1 : 0) + (q2 ? 1 : 0) + (q3 ? 1 : 0);
-  return sum >= 2 ? 'A' : 'B';
+  return sum >= THRESHOLD ? 'A' : 'B';
 }
 
 // Validate weights sum to 1.0 (with tolerance)
