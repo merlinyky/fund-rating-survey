@@ -18,6 +18,7 @@ export async function onRequestGet(context: { request: Request; env: Env }) {
         s1.route,
         s2.option as stage2_option,
         s2.base_rating,
+        rr.weighted_notch,
         rr.final_rating,
         rr.updated_at as rating_updated_at
       FROM counterparty c

@@ -44,6 +44,7 @@
               <th>Name</th>
               <th>Route</th>
               <th>Base Rating</th>
+              <th>Weighted Notch</th>
               <th>Final Rating</th>
               <th>Last Updated</th>
               <th>Actions</th>
@@ -51,7 +52,7 @@
           </thead>
           <tbody id="entries-tbody">
             <tr>
-              <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+              <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
                 Loading...
               </td>
             </tr>
@@ -103,7 +104,7 @@
         if (data.entries.length === 0) {
           entriesTbody.innerHTML = `
             <tr>
-              <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+              <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
                 No counterparties found. <a href="register.html">Create one now</a>
               </td>
             </tr>
@@ -117,6 +118,11 @@
             : '<span style="color: var(--text-secondary);">-</span>';
 
           const baseRating = entry.base_rating || '-';
+
+          const weightedNotch = entry.weighted_notch != null
+            ? `<span style="color: ${entry.weighted_notch >= 0 ? 'var(--error-color)' : 'var(--success-color)'};">${entry.weighted_notch > 0 ? '+' : ''}${entry.weighted_notch.toFixed(2)}</span>`
+            : '<span style="color: var(--text-secondary);">-</span>';
+
           const finalRating = entry.final_rating
             ? `<strong style="color: var(--primary-color);">${entry.final_rating}/6</strong>`
             : '<span style="color: var(--text-secondary);">-</span>';
@@ -127,6 +133,7 @@
               <td><strong>${entry.name}</strong></td>
               <td>${routeBadge}</td>
               <td>${baseRating}</td>
+              <td>${weightedNotch}</td>
               <td>${finalRating}</td>
               <td>${formatDate(entry.rating_updated_at || entry.created_at)}</td>
               <td>
@@ -139,7 +146,7 @@
         showError(error.message);
         entriesTbody.innerHTML = `
           <tr>
-            <td colspan="7" style="text-align: center; padding: 2rem; color: var(--error-color);">
+            <td colspan="8" style="text-align: center; padding: 2rem; color: var(--error-color);">
               Error loading data
             </td>
           </tr>

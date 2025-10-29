@@ -231,7 +231,7 @@
         resultDiv.className = 'card';
 
         if (isEditMode) {
-          // In edit mode, show options to return or continue editing
+          // In edit mode, show options to return to summary
           resultDiv.innerHTML = `
             <div style="text-align: center;">
               <h2 style="color: var(--success-color); margin-bottom: 1rem;">✓ Stage 2 Updated!</h2>
@@ -239,14 +239,9 @@
                 <h2>Base Rating: ${result.base_rating} / 6</h2>
                 <p>Portfolio data successfully recalculated</p>
               </div>
-              <div style="display: flex; gap: 1rem; flex-direction: column;">
-                <button id="return-summary-btn" class="btn btn-primary btn-block">
-                  Return to Summary
-                </button>
-                <button id="edit-another-btn" class="btn btn-secondary btn-block">
-                  Edit Another Stage
-                </button>
-              </div>
+              <button id="return-summary-btn" class="btn btn-primary btn-block">
+                Return to Summary
+              </button>
             </div>
           `;
 
@@ -254,10 +249,6 @@
 
           document.getElementById('return-summary-btn').addEventListener('click', () => {
             window.location.href = `review.html?id=${counterpartyId}`;
-          });
-
-          document.getElementById('edit-another-btn').addEventListener('click', () => {
-            window.location.href = `edit.html?id=${counterpartyId}&name=${encodeURIComponent(counterpartyName)}`;
           });
         } else {
           // Normal flow - continue to next stage

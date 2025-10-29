@@ -200,14 +200,9 @@
                 <p style="font-size: 1.125rem; margin-bottom: 2rem;">
                   Your answers have been saved. Route: <strong>${result.route}</strong>
                 </p>
-                <div style="display: flex; gap: 1rem; flex-direction: column;">
-                  <button id="return-summary-btn" class="btn btn-primary btn-block">
-                    Return to Summary
-                  </button>
-                  <button id="edit-another-btn" class="btn btn-secondary btn-block">
-                    Edit Another Stage
-                  </button>
-                </div>
+                <button id="return-summary-btn" class="btn btn-primary btn-block">
+                  Return to Summary
+                </button>
               </div>
             `;
 
@@ -215,10 +210,6 @@
 
             document.getElementById('return-summary-btn').addEventListener('click', () => {
               window.location.href = `review.html?id=${counterpartyId}`;
-            });
-
-            document.getElementById('edit-another-btn').addEventListener('click', () => {
-              window.location.href = `edit.html?id=${counterpartyId}&name=${encodeURIComponent(counterpartyName)}`;
             });
           }
         } else {

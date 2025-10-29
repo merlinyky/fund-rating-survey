@@ -24,7 +24,6 @@
 
     <div class="nav-links">
       <a href="index.html" class="btn btn-secondary">← Back to Dashboard</a>
-      <a href="#" id="edit-btn" class="btn btn-primary">Edit Survey</a>
     </div>
   </div>
 
@@ -34,7 +33,6 @@
 
     const counterpartyInfo = document.getElementById('counterparty-info');
     const summaryContainer = document.getElementById('summary-container');
-    const editBtn = document.getElementById('edit-btn');
 
     // Get ID from URL parameter
     const urlParams = new URLSearchParams(window.location.search);
@@ -46,6 +44,26 @@
         window.location.href = 'index.html';
       }, 2000);
     }
+
+    // Make edit functions global so onclick handlers can access them
+    window.editStage1 = function() {
+      setCounterpartyId(counterpartyId);
+      window.location.href = `stage1.html?edit=true`;
+    };
+
+    window.editStage2 = function(route) {
+      setCounterpartyId(counterpartyId);
+      if (route === 'A') {
+        window.location.href = `stage2a.html?edit=true`;
+      } else {
+        window.location.href = `stage2b.html?edit=true`;
+      }
+    };
+
+    window.editStage3 = function() {
+      setCounterpartyId(counterpartyId);
+      window.location.href = `stage3.html?edit=true`;
+    };
 
     async function loadSummary() {
       try {
@@ -78,7 +96,8 @@
         // Stage 1
         if (data.stage1) {
           html += `
-            <div class="card summary-section">
+            <div class="card summary-section" style="position: relative;">
+              <button class="btn btn-secondary" style="position: absolute; top: 1rem; right: 1rem; padding: 0.5rem 1rem; font-size: 0.875rem;" onclick="editStage1()">Edit</button>
               <h3>Stage 1 - Questions</h3>
               <div class="data-row">
                 <div class="data-label">Question 1:</div>
@@ -103,7 +122,8 @@
         // Stage 2
         if (data.stage2) {
           html += `
-            <div class="card summary-section">
+            <div class="card summary-section" style="position: relative;">
+              <button class="btn btn-secondary" style="position: absolute; top: 1rem; right: 1rem; padding: 0.5rem 1rem; font-size: 0.875rem;" onclick="editStage2('${data.stage1.route}')">Edit</button>
               <h3>Stage 2 - Portfolio Data (Route ${data.stage2.option === 1 ? 'A' : 'B'})</h3>
               <div class="data-row">
                 <div class="data-label">Base Rating:</div>
@@ -140,7 +160,8 @@
         // Stage 3 - Question Answers
         if (data.stage3 && data.stage3.answers && data.stage3.answers.length > 0) {
           html += `
-            <div class="card summary-section">
+            <div class="card summary-section" style="position: relative;">
+              <button class="btn btn-secondary" style="position: absolute; top: 1rem; right: 1rem; padding: 0.5rem 1rem; font-size: 0.875rem;" onclick="editStage3()">Edit</button>
               <h3>Stage 3 - Risk Assessment Questions</h3>
               <div style="margin-top: 1rem;">
                 <table style="margin-top: 0.5rem; width: 100%;">
@@ -189,14 +210,6 @@
         }
 
         summaryContainer.innerHTML = html;
-
-        // Set up edit button
-        editBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          setCounterpartyId(data.counterparty.id);
-          setCounterpartyName(data.counterparty.name);
-          window.location.href = `edit.html?id=${data.counterparty.id}&name=${encodeURIComponent(data.counterparty.name)}`;
-        });
       } catch (error) {
         showError(error.message);
       } finally {
