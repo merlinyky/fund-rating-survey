@@ -35,7 +35,7 @@ jobs:
         continue-on-error: true
 
       - name: Deploy to Cloudflare Pages
-        run: wrangler pages deploy frontend --project-name=data-collector
+        run: wrangler pages deploy frontend --project-name=fund-rating-survey
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
