@@ -6,7 +6,7 @@ const isLocal = window.location.hostname === 'localhost' || window.location.host
 // API base URL - update this after deploying to Cloudflare Pages
 export const API_BASE_URL = isLocal
   ? 'http://localhost:8788/api'  // Local development
-  : 'https://data-collector-api.pages.dev/api';  // Production - UPDATE THIS URL
+  : 'https://fund-rating-survey.pages.dev/api';  // Production
 
 // Session storage keys
 export const STORAGE_KEYS = {
