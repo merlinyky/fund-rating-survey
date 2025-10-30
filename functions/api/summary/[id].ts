@@ -54,6 +54,7 @@ export async function onRequestGet(context: { request: Request; env: Env; params
     return jsonResponse({
       counterparty: {
         id: counterparty.id,
+        cp_id: counterparty.cp_id,
         name: counterparty.name,
         created_at: counterparty.created_at,
       },
